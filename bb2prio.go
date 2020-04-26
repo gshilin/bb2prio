@@ -1,4 +1,5 @@
 // Read all Completed messages from civicrm driver's database and write them to 4priority service
+// go build bb2prio.go ; strip bb2prio; cp bb2prio /media/sf_projects/bbpriority/
 
 package main
 
@@ -151,55 +152,55 @@ SELECT
   con.nick_name ORG,
   fa.accounting_code QAMO_PARTNAME,
   fa.is_deductible QAMO_VAT,
-  co.id CID, -- to join with BB table
-  cc.display_name QAMO_CUSTDES, -- שם לקוח
+  co.id CID,
+  cc.display_name QAMO_CUSTDES,
   (
     SELECT count(1) + 1
     FROM civicrm_participant pa
     WHERE pa.registered_by_id = pp.participant_id
-  ) QAMO_DETAILS, -- participants
-  SUBSTRING(co.source, 1, 48) QAMO_PARTDES, -- תאור מוצר
+  ) QAMO_DETAILS,
+  SUBSTRING(co.source, 1, 48) QAMO_PARTDES,
   CASE bb.cardtype
-	WHEN 1 THEN 'ISR' -- Isracard
-	WHEN 2 THEN 'CAL' -- Visa CAL
-	WHEN 3 THEN 'DIN' -- Diners
-	WHEN 4 THEN 'AME' -- American Express
-	WHEN 6 THEN 'LEU' -- LeumiCard
+	WHEN 1 THEN 'ISR'
+	WHEN 2 THEN 'CAL'
+	WHEN 3 THEN 'DIN'
+	WHEN 4 THEN 'AME'
+	WHEN 6 THEN 'LEU'
 	ELSE
     	CASE
-    		WHEN co.trxn_id IS NULL THEN 'CAS' -- Cash
+    		WHEN co.trxn_id IS NULL THEN 'CAS'
         	WHEN co.trxn_id REGEXP '^[A-Z0-9]{17}$' THEN
             	CASE co.currency
-                	WHEN 'USD' THEN 'PPU' -- PayPal USD
-                    WHEN 'EUR' THEN 'PPE' -- PayPal EURO
-                    ELSE 'PPS'  -- PayPal Shekel
+                	WHEN 'USD' THEN 'PPU'
+                    WHEN 'EUR' THEN 'PPE'
+                    ELSE 'PPS'
                 END
-        	ELSE 'CAS' -- Cash
+        	ELSE 'CAS'
     	END
 
-  END QAMO_PAYMENTCODE, -- קוד אמצעי תשלום
+  END QAMO_PAYMENTCODE,
   bb.token QAMO_CARDNUM,
   bb.approval QAMT_AUTHNUM,
-  bb.cardnum QAMO_PAYMENTCOUNT, -- מס כרטיס/חשבון
-  bb.cardexp QAMO_VALIDMONTH, -- תוקף
-  COALESCE(bb.amount, co.total_amount) QAMO_PAYPRICE, -- סכום בפועל
+  bb.cardnum QAMO_PAYMENTCOUNT,
+  bb.cardexp QAMO_VALIDMONTH,
+  COALESCE(bb.amount, co.total_amount) QAMO_PAYPRICE,
   CASE co.currency
     WHEN 'USD' THEN '$'
     WHEN 'EUR' THEN 'EUR'
     ELSE 'ש"ח'
-  END QAMO_CURRNCY, -- קוד מטבע
-  COALESCE(bb.installments, 1) QAMO_PAYCODE, -- קוד תנאי תשלום
-  bb.firstpay QAMO_FIRSTPAY, -- גובה תשלום ראשון
-  emails.email QAMO_EMAIL, -- אי מייל
-  (SELECT address.street_address FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1) QAMO_ADRESS, -- כתובת
-  (SELECT address.city FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1) QAMO_CITY, -- עיר
-  (SELECT phone FROM civicrm_phone phones WHERE phones.contact_id = co.contact_id AND phones.is_primary = 1 LIMIT 1) QAMO_CELL, -- נייד
+  END QAMO_CURRNCY,
+  COALESCE(bb.installments, 1) QAMO_PAYCODE,
+  bb.firstpay QAMO_FIRSTPAY,
+  (SELECT email FROM civicrm_email emails WHERE emails.contact_id = co.contact_id LIMIT 1) QAMO_EMAIL,
+  (SELECT address.street_address FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) QAMO_ADRESS,
+  (SELECT address.city FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) QAMO_CITY,
+  (SELECT phone FROM civicrm_phone phones WHERE phones.contact_id = co.contact_id AND phones.is_primary = 1 LIMIT 1) QAMO_CELL,
   (SELECT country.name FROM civicrm_country country WHERE country.id = 
-  					(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1)) 
-  			QAMO_FROM, -- מקור הגעה (country)
+		(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) LIMIT 1) 
+  			QAMO_FROM,
   COALESCE(bb.created_at, co.receive_date) QAMM_UDATE,
   CASE (SELECT country.name FROM civicrm_country country WHERE country.id = 
-  					(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1))
+  					(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) LIMIT 1)
   			WHEN 'Israel' THEN 'HE' ELSE 'EN' END QAMO_LANGUAGE
 FROM civicrm_contribution co
   INNER JOIN civicrm_contact cc ON co.contact_id = cc.id
@@ -207,7 +208,6 @@ FROM civicrm_contribution co
   INNER JOIN civicrm_financial_account fa ON fa.id = efa.financial_account_id
   INNER JOIN civicrm_contact con ON con.id = fa.contact_id
   LEFT OUTER JOIN civicrm_bb_payment_responses bb ON bb.cid = co.id
-  LEFT OUTER JOIN civicrm_email emails ON emails.contact_id = co.contact_id
   LEFT OUTER JOIN civicrm_participant_payment pp ON pp.contribution_id = co.id
 WHERE
   co.id >= ?
@@ -219,12 +219,11 @@ WHERE
       FROM civicrm_option_group
       WHERE name = "contribution_status"
       LIMIT 1
-    ) AND name = 'Completed' -- only completed payments
+    ) AND name = 'Completed'
     LIMIT 1
-  ) AND co.is_test = 0 -- not test payments
-  AND co.invoice_number IS NULL -- not submitted yet
-  AND con.nick_name IN ('ben2', 'arvut2', 'mish') -- only known organizations
-  AND emails.is_primary = 1 -- use only primary email
+  ) AND co.is_test = 0
+  AND co.invoice_number IS NULL
+  AND con.nick_name IN ('ben2', 'arvut2', 'meshp18')
 	`, startFrom)
 	if err != nil {
 		log.Fatalf("Unable to select rows: %v\n", err)
