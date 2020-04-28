@@ -86,7 +86,7 @@ func main() {
 			log.Fatalf("Wrong value for Start From: (%s) %s\n", startFromS, err)
 		}
 	}
-	urlStr := os.Getenv("PRIO_HOST")
+	urlStr = os.Getenv("PRIO_HOST")
 	if urlStr == "" {
 		log.Fatalf("Unable to connect Priority without its address\n")
 	}
