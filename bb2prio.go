@@ -8,16 +8,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/jmoiron/sqlx"
-	_ "github.com/joho/godotenv/autoload"
-	_ "github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/jmoiron/sqlx"
+	_ "github.com/joho/godotenv/autoload"
+	_ "github.com/pkg/errors"
 )
 
 // Read messages from database
@@ -67,7 +68,6 @@ func main() {
 	user := os.Getenv("CIVI_USER")
 	if user == "" {
 		log.Fatalf("Unable to connect without username\n")
-		os.Exit(2)
 	}
 	password := os.Getenv("CIVI_PASSWORD")
 	if password == "" {
@@ -86,19 +86,13 @@ func main() {
 			log.Fatalf("Wrong value for Start From: (%s) %s\n", startFromS, err)
 		}
 	}
-	prioHost := os.Getenv("PRIO_HOST")
-	if prioHost == "" {
-		log.Fatalf("Unable to connect Priority without host name\n")
-	}
-	prioPort := os.Getenv("PRIO_PORT")
-	if prioPort == "" {
-		log.Fatalf("Unable to connect Priority without port number\n")
+	urlStr := os.Getenv("PRIO_HOST")
+	if urlStr == "" {
+		log.Fatalf("Unable to connect Priority without its address\n")
 	}
 
 	db, stmt := OpenDb(host, user, password, protocol, dbName)
 	defer closeDb(db)
-
-	urlStr = "http://" + prioHost + ":" + prioPort + "/payment_event"
 
 	ReadMessages(db, stmt, startFrom)
 }
@@ -127,7 +121,7 @@ func OpenDb(host string, user string, password string, protocol string, dbName s
 }
 
 func closeDb(db *sqlx.DB) {
-	db.Close()
+	_ = db.Close()
 }
 
 func isTableExists(db *sqlx.DB, dbName string, tableName string) (exists bool) {
