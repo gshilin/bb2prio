@@ -83,7 +83,8 @@ func main() {
 		startFrom = 38800
 	} else {
 		if startFrom, err = strconv.Atoi(startFromS); err != nil {
-			log.Fatalf("Wrong value for Start From: (%s) %s\n", startFromS, err)
+			fmt.Printf("Wrong value for Start From: (%s) %s\n", startFromS, err)
+			startFrom = 38800
 		}
 	}
 	urlStr = os.Getenv("PRIO_HOST")
@@ -227,7 +228,8 @@ WHERE
 		// Read messages from DB
 		err = rows.StructScan(&contribution)
 		if err != nil {
-			log.Fatalf("Table 'civicrm_contribution' access error: %v\n", err)
+			fmt.Printf("Table 'civicrm_contribution' access error: %v\n", err)
+			continue
 		}
 		// Submit 2 priority
 		submit2priority(contribution)
@@ -320,45 +322,54 @@ func submit2priority(contribution Contribution) {
 
 	marshal, err := json.Marshal(priority)
 	if err != nil {
-		log.Fatalf("Marshal error: %v\n", err)
+		fmt.Printf("Marshal error: %v\n", err)
+		return
 	}
 	log.Printf("%s\n", marshal)
 
 	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(marshal))
 	if err != nil {
-		log.Fatalf("NewRequest error: %v\n", err)
+		fmt.Printf("NewRequest error: %v\n", err)
+		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("client.Do error: %v\n", err)
+		fmt.Printf("client.Do error: %v\n", err)
+		return
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("ReadAll error: %v\n", err)
+		fmt.Printf("ReadAll error: %v\n", err)
+		return
 	}
 	message := Message{}
 	if err := json.Unmarshal(body, &message); err != nil {
-		log.Fatalf("Unmarshal error: %v\n", err)
+		fmt.Printf("Unmarshal error: %v\n", err)
+		return
 	}
 	if message.Error {
-		log.Fatalf("Response error: %s\n", message.Message)
+		fmt.Printf("Response error: %s\n", message.Message)
+		return
 	}
 }
 
 func updateReported2prio(stmt *sql.Stmt, id string) {
 	res, err := stmt.Exec(id)
 	if err != nil {
-		log.Fatalf("Update error: %v\n", err)
+		fmt.Printf("Update error: %v\n", err)
+		return
 	}
 	rowCnt, err := res.RowsAffected()
 	if err != nil {
-		log.Fatalf("Update error: %v\n", err)
+		fmt.Printf("Update error: %v\n", err)
+		return
 	}
 	if rowCnt != 1 {
-		log.Fatalf("Update error: %d rows were updated instead of 1\n", rowCnt)
+		fmt.Printf("Update error: %d rows were updated instead of 1\n", rowCnt)
+		return
 	}
 }
