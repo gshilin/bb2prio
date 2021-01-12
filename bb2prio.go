@@ -232,10 +232,10 @@ WHERE
 			continue
 		}
 		// Submit 2 priority
-		submit2priority(contribution)
-
-		// Update Reported2prio in case of success
-		updateReported2prio(markAsDone, contribution.ID)
+		if submit2priority(contribution) {
+			// Update Reported2prio in case of success
+			updateReported2prio(markAsDone, contribution.ID)
+		}
 		totalPaymentsRead++
 	}
 
@@ -254,7 +254,7 @@ WHERE
 //	return t.In(loc).Format("2006-01-02 15:04:05")
 //}
 
-func submit2priority(contribution Contribution) {
+func submit2priority(contribution Contribution) (success bool) {
 	// priority's database structure
 	type Priority struct {
 		ID           string  `json:"id"`
@@ -355,6 +355,8 @@ func submit2priority(contribution Contribution) {
 		fmt.Printf("Response error: %s\n", message.Message)
 		return
 	}
+
+	return true
 }
 
 func updateReported2prio(stmt *sql.Stmt, id string) {
