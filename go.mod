@@ -5,6 +5,7 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/joho/godotenv v1.3.0
 	github.com/pkg/errors v0.8.1
+	google.golang.org/appengine v1.6.7 // indirect
 )
 
 go 1.13
