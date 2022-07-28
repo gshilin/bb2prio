@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
@@ -357,8 +358,10 @@ func submit2priority(contribution Contribution) (success bool) {
 		return
 	}
 	if message.Error {
-		fmt.Printf("Response error: %s\n", message.Message)
-		return
+		if !strings.Contains(message.Message, "A record with the specified key already exists") {
+			fmt.Printf("Response error: %s\n", message.Message)
+			return
+		}
 	}
 
 	return true
