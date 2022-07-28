@@ -33,6 +33,7 @@ type Contribution struct {
 	QAMO_PARTDES      sql.NullString  `db:"QAMO_PARTDES"`
 	QAMO_PAYMENTCODE  sql.NullString  `db:"QAMO_PAYMENTCODE"`
 	QAMO_CARDNUM      sql.NullString  `db:"QAMO_CARDNUM"`
+	IS_REGULAR        sql.NullInt64   `db:"IS_REGULAR"`
 	QAMT_AUTHNUM      sql.NullString  `db:"QAMT_AUTHNUM"`
 	QAMO_PAYMENTCOUNT sql.NullString  `db:"QAMO_PAYMENTCOUNT"`
 	QAMO_VALIDMONTH   sql.NullString  `db:"QAMO_VALIDMONTH"`
@@ -176,6 +177,7 @@ SELECT
 
   END QAMO_PAYMENTCODE,
   bb.token QAMO_CARDNUM,
+  bb.is_regular IS_REGULAR,
   bb.approval QAMT_AUTHNUM,
   bb.cardnum QAMO_PAYMENTCOUNT,
   bb.cardexp QAMO_VALIDMONTH,
@@ -283,6 +285,7 @@ func submit2priority(contribution Contribution) (success bool) {
 		Reference    string  `json:"reference"`
 		Organization string  `json:"organization"`
 		IsVisual     bool    `json:"is_visual"`
+		IsRegular    int64   `json:"is_regular,omitempty"`
 	}
 
 	type Message struct {
@@ -304,6 +307,7 @@ func submit2priority(contribution Contribution) (success bool) {
 		Installments: contribution.QAMO_PAYCODE.Int64,
 		FirstPay:     contribution.QAMO_FIRSTPAY.Float64,
 		Token:        contribution.QAMO_CARDNUM.String,
+		IsRegular:    contribution.IS_REGULAR.Int64,
 		Approval:     contribution.QAMT_AUTHNUM.String,
 		Is46:         contribution.QAMO_VAT.String == "1",
 		Email:        contribution.QAMO_EMAIL.String,
