@@ -1,5 +1,5 @@
 // Read all Completed messages from civicrm driver's database and write them to 4priority service
-// go build bb2prio.go ; strip bb2prio; cp bb2prio /media/sf_projects/bbpriority/
+// CGO_ENABLED=0 go build bb2prio.go ; strip bb2prio; cp bb2prio /media/sf_projects/bbpriority/
 
 package main
 
@@ -194,13 +194,23 @@ SELECT
   (SELECT address.street_address FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) QAMO_ADRESS,
   (SELECT address.city FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) QAMO_CITY,
   (SELECT phone FROM civicrm_phone phones WHERE phones.contact_id = co.contact_id AND phones.is_primary = 1 LIMIT 1) QAMO_CELL,
-  (SELECT country.name FROM civicrm_country country WHERE country.id = 
-		(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) LIMIT 1) 
-  			QAMO_FROM,
+  COALESCE(
+      (SELECT country.name FROM civicrm_country country WHERE country.iso_code = 
+		  (SELECT country_256.bb_country_1629 from civicrm_value_bb_country_256 country_256 where country_256.entity_id = cc.id LIMIT 1)
+		LIMIT 1)
+   	,   
+	(SELECT country.name FROM civicrm_country country WHERE country.id = 
+		(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1)
+	LIMIT 1) 
+  ) QAMO_FROM,
   COALESCE(bb.created_at, co.receive_date) QAMM_UDATE,
-  CASE (SELECT country.name FROM civicrm_country country WHERE country.id = 
+  IF(COALESCE(
+		  (SELECT country.name FROM civicrm_country country WHERE country.iso_code = 
+		  	(SELECT country_256.bb_country_1629 from civicrm_value_bb_country_256 country_256 where country_256.entity_id = cc.id LIMIT 1)
+			LIMIT 1),
+		  (SELECT country.name FROM civicrm_country country WHERE country.id = 
   					(SELECT address.country_id FROM civicrm_address address WHERE address.contact_id = co.contact_id AND address.is_primary = 1 LIMIT 1) LIMIT 1)
-  			WHEN 'Israel' THEN 'HE' ELSE 'EN' END QAMO_LANGUAGE
+      ) = 'Israel', 'HE', 'EN') QAMO_LANGUAGE
 FROM civicrm_contribution co
   INNER JOIN civicrm_contact cc ON co.contact_id = cc.id
   INNER JOIN civicrm_entity_financial_account efa ON co.financial_type_id = efa.entity_id AND efa.account_relationship = 1
