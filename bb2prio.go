@@ -223,13 +223,12 @@ WHERE
   AND co.contribution_status_id = (
     SELECT value contributionStatus
     FROM civicrm_option_value
-    WHERE option_group_id = (
+    WHERE option_group_id IN (
       SELECT id contributionStatusID
       FROM civicrm_option_group
       WHERE name = "contribution_status"
       LIMIT 1
-    ) AND name = 'Completed'
-    LIMIT 1
+    ) AND name IN ('Completed', 'Refunded')
   ) AND co.is_test = 0
   AND co.invoice_number IS NULL
   AND con.nick_name IN ('ben2', 'arvut2', 'meshp18')
